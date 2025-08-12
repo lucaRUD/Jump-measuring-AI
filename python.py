@@ -1,17 +1,26 @@
 import cv2
 
 # 0 = camera default (laptop)
-cap = cv2.VideoCapture(0)
+cap = cv2.VideoCapture("manjump.mp4")
+
+
+if not cap.isOpened():
+    print("Video could not be opened")
+    exit()
+
 
 while True:
-    ret, frame = cap.read()  # Citim un frame
+    ret, frame = cap.read()  # Read a frame
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    cv2.rectangle(frame, (50, 50), (200, 200), (0, 255, 0), 2)
+    
     if not ret:
         break
 
-    cv2.imshow('Camera mea', frame)
+    cv2.imshow('Camera mea', gray)
 
     # Dacă apeși tasta 'q', ieși din loop
-    if cv2.waitKey(1) & 0xFF == ord('q'):
+    if cv2.waitKey(75) & 0xFF == ord('q'):
         break
 
 cap.release()
