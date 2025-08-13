@@ -1,7 +1,13 @@
 import cv2
+import mediapipe as mp
 
 # 0 = camera default (laptop)
 cap = cv2.VideoCapture("manjump.mp4")
+
+
+mp_pose = mp.solutions.pose
+pose = mp_pose.Pose()
+mp_drawing = mp.solutions.drawing_utils
 
 
 if not cap.isOpened():
@@ -10,14 +16,25 @@ if not cap.isOpened():
 
 
 while True:
-    ret, frame = cap.read()  # Read a frame
-    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    cv2.rectangle(frame, (50, 50), (200, 200), (0, 255, 0), 2)
-    
+    ret, frame = cap.read()  # Read a frame    
     if not ret:
         break
 
-    cv2.imshow('Camera mea', gray)
+    # Convert the frame to RGB because Mediapipe requires RGB images and cv2 outputs BGR
+    frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
+    #process frame with Pose model
+    results = pose.process(frame_rgb)
+
+    #draw landmarks
+    if results.pose_landmarks:
+        nose = results.pose_landmarks.landmark[mp_pose.PoseLandmark.NOSE]
+
+        print(f'Nose coordinates: ({nose.x}, {nose.y}, {nose.z})')  # Print nose coordinates
+        mp_drawing.draw_landmarks(frame, results.pose_landmarks, mp_pose.POSE_CONNECTIONS)
+
+
+    cv2.imshow('Pose Detection', frame)
 
     # Dacă apeși tasta 'q', ieși din loop
     if cv2.waitKey(75) & 0xFF == ord('q'):
