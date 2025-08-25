@@ -15,6 +15,9 @@ hip_y_buffer = deque(maxlen=5) # simple moving average over last 5 frames
 baseline_y = None               # will set by pressing 'b'
 last_y = None                   # for velocity later
 
+measuring = False
+peak_y = None
+max_height_px = 0
 
 if not cap.isOpened():
     print("Video could not be opened")
@@ -46,9 +49,17 @@ while True:
         hip_y_px = int(((LHIP.y + RHIP.y) / 2) * h)
 
         hip_y_buffer.append(hip_y_px)
-        hip_y_smooth = sum(hip_y_buffer) / len(hip_y_buffer)
 
-        cv2.circle(frame, (hip_x_px, hip_y_px), 6, (0 , 0, 255), -1)
+        #smooth hip_y
+        hip_y = sum(hip_y_buffer) / len(hip_y_buffer)
+
+        if measuring :
+            if hip_y < peak_y : #smaller y means its higher, it measures y from the top
+                peak_y = hip_y # new peak
+                max_height_px = baseline_y - peak_y
+                cv2.putText(frame , f"Jump height: {max_height_px}px", (10,20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
+                
+        cv2.circle(frame, (hip_x_px, hip_y_px), 6, (255 , 0, 0), -1)
 
         # if baseline is set, draw it as a horizontal line
 
@@ -68,13 +79,24 @@ while True:
 
     cv2.imshow('Pose Detection', frame)
 
-    key = cv2.waitKey(90) & 0xFF
+
+    key = cv2.waitKey(120) & 0xFF
     if key == ord('b'):
-        baseline_y = hip_y_smooth #set standing baseline
-        print("Baseline set to:", baseline_y)
+        baseline_y = hip_y #set standing baseline
+        print("Baseline set to:", "%.2f" % baseline_y)
+        measuring = True
+        peak_y = hip_y
+        max_height_px = 0
+        print("Jump measurement started")
+    elif key == ord('r'):
+        measuring = False
+        peak_y = None
+        max_height_px = 0
+        print("Jump measurement reset")
+
     elif key == ord('q'):
         break
-
+print("Jump height is:", "%.2f" % max_height_px, "px")
 cap.release()
 cv2.destroyAllWindows()
 
