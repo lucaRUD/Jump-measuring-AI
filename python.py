@@ -1,5 +1,6 @@
 import cv2
 import mediapipe as mp
+from collections import deque
 
 # 0 = camera default (laptop)
 cap = cv2.VideoCapture("manjump.mp4")
@@ -8,6 +9,11 @@ cap = cv2.VideoCapture("manjump.mp4")
 mp_pose = mp.solutions.pose
 pose = mp_pose.Pose()
 mp_drawing = mp.solutions.drawing_utils
+
+# Smoothing buffer for hip y
+hip_y_buffer = deque(maxlen=5) # simple moving average over last 5 frames
+baseline_y = None               # will set by pressing 'b'
+last_y = None                   # for velocity later
 
 
 if not cap.isOpened():
@@ -28,16 +34,45 @@ while True:
 
     #draw landmarks
     if results.pose_landmarks:
-        nose = results.pose_landmarks.landmark[mp_pose.PoseLandmark.NOSE]
-
-        print(f'Nose coordinates: ({nose.x}, {nose.y}, {nose.z})')  # Print nose coordinates
+        h , w = frame.shape[:2]
         mp_drawing.draw_landmarks(frame, results.pose_landmarks, mp_pose.POSE_CONNECTIONS)
+        LHIP = results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_HIP]
+        RHIP = results.pose_landmarks.landmark[mp_pose.PoseLandmark.RIGHT_HIP]
+
+        #mid hip x in pixels 
+        hip_x_px = int(((LHIP.x + RHIP.x) / 2) * w)
+
+        #mid hip y in pixels 
+        hip_y_px = int(((LHIP.y + RHIP.y) / 2) * h)
+
+        hip_y_buffer.append(hip_y_px)
+        hip_y_smooth = sum(hip_y_buffer) / len(hip_y_buffer)
+
+        cv2.circle(frame, (hip_x_px, hip_y_px), 6, (0 , 0, 255), -1)
+
+        # if baseline is set, draw it as a horizontal line
+
+        if baseline_y is not None:
+            cv2.line(frame, (0, int(baseline_y)), (w, int(baseline_y)), (0, 255, 0), 2)
+
+
+
+
+        
+
+
+
+
+    
 
 
     cv2.imshow('Pose Detection', frame)
 
-    # Dacă apeși tasta 'q', ieși din loop
-    if cv2.waitKey(75) & 0xFF == ord('q'):
+    key = cv2.waitKey(90) & 0xFF
+    if key == ord('b'):
+        baseline_y = hip_y_smooth #set standing baseline
+        print("Baseline set to:", baseline_y)
+    elif key == ord('q'):
         break
 
 cap.release()
