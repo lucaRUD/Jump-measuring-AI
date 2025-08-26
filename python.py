@@ -1,10 +1,18 @@
 import cv2
 import mediapipe as mp
 from collections import deque
+import numpy as np
 
 # 0 = camera default (laptop)
 cap = cv2.VideoCapture("manjump.mp4")
 
+
+WARMUP_FRAMES = 20
+VELOCITY_THRESHOLD = 1.5  # pixels per frame
+baseline_samples = []  # a list where we'll store candidate "hip_y" values
+frame_index = 0 # counts which frame we are on
+prev_hip_y = None  # remembers hip_y from the previous frame
+baseline_y = None   # the final baseline value (starts as unknown)
 
 mp_pose = mp.solutions.pose
 pose = mp_pose.Pose()
@@ -28,6 +36,7 @@ while True:
     ret, frame = cap.read()  # Read a frame    
     if not ret:
         break
+
 
     # Convert the frame to RGB because Mediapipe requires RGB images and cv2 outputs BGR
     frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -54,12 +63,39 @@ while True:
         hip_y = sum(hip_y_buffer) / len(hip_y_buffer)
 
         if measuring :
-            if hip_y < peak_y : #smaller y means its higher, it measures y from the top
+            if peak_y is None or hip_y < peak_y : #smaller y means its higher, it measures y from the top
                 peak_y = hip_y # new peak
                 max_height_px = baseline_y - peak_y
                 cv2.putText(frame , f"Jump height: {max_height_px}px", (10,20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
                 
         cv2.circle(frame, (hip_x_px, hip_y_px), 6, (255 , 0, 0), -1)
+
+        #automatic baseline setter 
+        frame_index += 1 #count the frames
+
+        if prev_hip_y is None:
+            vel = 0
+        else:
+            vel = abs(hip_y - prev_hip_y)
+
+        prev_hip_y = hip_y # update memory for next loop
+
+
+        if baseline_y is None:  #only works till baseline is found 
+            if frame_index <= WARMUP_FRAMES: #collect only warmup frames
+                if vel < VELOCITY_THRESHOLD: #if the hip is stable 
+                    baseline_samples.append(hip_y)
+            else:
+                # decide baseline after warmup
+                if len(baseline_samples) > 5: 
+                    baseline_y = float(np.mean(baseline_samples))
+                    print("Baseline estimated to be at" "%.2f" % baseline_y, "px")
+                    measuring = True
+                else:
+                    # fallback if we didn't find enough samples where the hip is not moving 
+                    baseline_y = float(hip_y)
+                    print("Baseline fallback to current hip position:", "%.2f" % baseline_y, "px")
+
 
         # if baseline is set, draw it as a horizontal line
 
