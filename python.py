@@ -4,7 +4,7 @@ from collections import deque
 import numpy as np
 
 # 0 = camera default (laptop)
-cap = cv2.VideoCapture("manjump.mp4")
+cap = cv2.VideoCapture("manjump2.mp4")
 
 
 WARMUP_FRAMES = 20
@@ -62,11 +62,7 @@ while True:
         #smooth hip_y
         hip_y = sum(hip_y_buffer) / len(hip_y_buffer)
 
-        if measuring :
-            if peak_y is None or hip_y < peak_y : #smaller y means its higher, it measures y from the top
-                peak_y = hip_y # new peak
-                max_height_px = baseline_y - peak_y
-                cv2.putText(frame , f"Jump height: {max_height_px}px", (10,20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
+
                 
         cv2.circle(frame, (hip_x_px, hip_y_px), 6, (255 , 0, 0), -1)
 
@@ -96,7 +92,11 @@ while True:
                     baseline_y = float(hip_y)
                     print("Baseline fallback to current hip position:", "%.2f" % baseline_y, "px")
 
-
+        if measuring :
+            if peak_y is None or hip_y < peak_y : #smaller y means its higher, it measures y from the top
+                peak_y = hip_y # new peak
+                max_height_px = baseline_y - peak_y
+                cv2.putText(frame , f"Jump height: {max_height_px}px", (10,20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
         # if baseline is set, draw it as a horizontal line
 
         if baseline_y is not None:
@@ -116,7 +116,7 @@ while True:
     cv2.imshow('Pose Detection', frame)
 
 
-    key = cv2.waitKey(120) & 0xFF
+    key = cv2.waitKey(1) & 0xFF
     if key == ord('b'):
         baseline_y = hip_y #set standing baseline
         print("Baseline set to:", "%.2f" % baseline_y)
