@@ -2,6 +2,27 @@ import cv2
 import mediapipe as mp
 from collections import deque
 import numpy as np
+import math
+
+def angle_from_three_points(a, b, c):
+    #calculate the angle between 3 points, angle is returned at b in degrees
+    v1 = (a[0] - b[0] ,a[1] - b[1]) #vector from b to a (knee to hip)
+    v2 = (c[0] - b[0], c[1] - b[1]) #vector from b to c (ankle to hip)
+    dot_product = v1[0]*v2[0]+ v1[1] *v2[1] #dot product (produs scalar)
+    mag1 = math.hypot(v1[0], v1[1]) #magnitude of vector 1 --> modulul lui v1 | sqrt(x^2+y^2)
+    mag2 = math.hypot(v2[0], v2[1]) #magnitude of vector 2 --> modulul lui v2
+
+    if mag1 == 0 or mag2 == 0:
+        return 0.0
+    cos_theta = dot_product / (mag1 * mag2)
+
+    #numeric safety
+    cos_theta = max(-1.0, min(1.0, cos_theta))
+    theta_rad = math.acos(cos_theta) #angle in radians
+    return math.degrees(theta_rad)  #convert to degrees
+
+    
+
 
 # 0 = camera default (laptop)
 cap = cv2.VideoCapture("manjump2.mp4")
@@ -85,7 +106,7 @@ while True:
                 # decide baseline after warmup
                 if len(baseline_samples) > 5: 
                     baseline_y = float(np.mean(baseline_samples))
-                    print("Baseline estimated to be at" "%.2f" % baseline_y, "px")
+                    print("Baseline estimated to be at " "%.2f" % baseline_y, "px")
                     measuring = True
                 else:
                     # fallback if we didn't find enough samples where the hip is not moving 
