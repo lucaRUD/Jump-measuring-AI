@@ -25,7 +25,7 @@ def angle_from_three_points(a, b, c):
 
 
 # 0 = camera default (laptop)
-cap = cv2.VideoCapture("manjump2.mp4")
+cap = cv2.VideoCapture("manjump3-47.1.mp4")
 
 
 WARMUP_FRAMES = 20
@@ -72,6 +72,19 @@ while True:
         LHIP = results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_HIP]
         RHIP = results.pose_landmarks.landmark[mp_pose.PoseLandmark.RIGHT_HIP]
 
+        
+        LSHOULDER= results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_SHOULDER]
+        LKNEE= results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_KNEE]
+        LANKLE= results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_ANKLE]
+
+        l_shoulder = int(LSHOULDER.x * w), int(LSHOULDER.y * h)#left shoulder in pixels
+        l_hip = int(LHIP.x * w), int(LHIP.y * h)#left hip in pixels
+        l_knee = int(LKNEE.x * w), int(LKNEE.y * h)
+        l_ankle = int(LANKLE.x * w), int(LANKLE.y * h)
+
+        knee_angle = angle_from_three_points(l_shoulder, l_knee, l_ankle)
+        cv2.putText(frame , f"Knee angle: {knee_angle:.1f}", (10,40), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
+
         #mid hip x in pixels 
         hip_x_px = int(((LHIP.x + RHIP.x) / 2) * w)
 
@@ -100,7 +113,7 @@ while True:
 
         if baseline_y is None:  #only works till baseline is found 
             if frame_index <= WARMUP_FRAMES: #collect only warmup frames
-                if vel < VELOCITY_THRESHOLD: #if the hip is stable 
+                if vel < VELOCITY_THRESHOLD and knee_angle > 160: #if the hip is stable and knee angle is bigger than knee_angle degrees 
                     baseline_samples.append(hip_y)
             else:
                 # decide baseline after warmup
