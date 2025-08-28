@@ -30,6 +30,8 @@ cap = cv2.VideoCapture("manjump3-47.1.mp4")
 
 WARMUP_FRAMES = 20
 VELOCITY_THRESHOLD = 1.5  # pixels per frame
+ANGLE_THRESHOLD = 160  # degrees, knee angle to consider standing
+MIN_BASELINE_SAMPLES = 5
 baseline_samples = []  # a list where we'll store candidate "hip_y" values
 frame_index = 0 # counts which frame we are on
 prev_hip_y = None  # remembers hip_y from the previous frame
@@ -41,7 +43,7 @@ mp_drawing = mp.solutions.drawing_utils
 
 # Smoothing buffer for hip y
 hip_y_buffer = deque(maxlen=5) # simple moving average over last 5 frames
-baseline_y = None               # will set by pressing 'b'
+baseline_y = None               
 last_y = None                   # for velocity later
 
 measuring = False
@@ -113,11 +115,11 @@ while True:
 
         if baseline_y is None:  #only works till baseline is found 
             if frame_index <= WARMUP_FRAMES: #collect only warmup frames
-                if vel < VELOCITY_THRESHOLD and knee_angle > 160: #if the hip is stable and knee angle is bigger than knee_angle degrees 
+                if vel < VELOCITY_THRESHOLD and knee_angle > ANGLE_THRESHOLD: #if the hip is stable and knee angle is bigger than knee_angle degrees 
                     baseline_samples.append(hip_y)
             else:
                 # decide baseline after warmup
-                if len(baseline_samples) > 5: 
+                if len(baseline_samples) > MIN_BASELINE_SAMPLES: 
                     baseline_y = float(np.mean(baseline_samples))
                     print("Baseline estimated to be at " "%.2f" % baseline_y, "px")
                     measuring = True
